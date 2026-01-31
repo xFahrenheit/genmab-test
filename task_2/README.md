@@ -66,8 +66,9 @@ terraform init
 ```
 
 - Apply Infrastructure
-``` terraform apply \
-  -var="bucket_name=genmab-task-artifacts-2c4cbbb1"
+```
+terraform apply \
+-var="bucket_name=genmab-task-artifacts-2c4cbbb1"
   ```
 
 Terraform performs the following actions:
