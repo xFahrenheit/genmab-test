@@ -92,6 +92,11 @@ resource "aws_iam_role_policy" "sagemaker_policy" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "ecr_readonly" {
+  role       = aws_iam_role.sagemaker_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 #######################
 # SageMaker Model
 #######################
@@ -100,7 +105,7 @@ resource "aws_sagemaker_model" "model" {
   execution_role_arn = aws_iam_role.sagemaker_role.arn
 
 primary_container {
-  image          = "683313688378.dkr.ecr.us-east-2.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3"
+  image          = "public.ecr.aws/sagemaker/sagemaker-distribution:3.7-gpu"
   model_data_url = "s3://${aws_s3_bucket.artifact_bucket.bucket}/${aws_s3_object.model_artifact.key}"
 }
 
