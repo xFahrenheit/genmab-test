@@ -100,9 +100,10 @@ resource "aws_sagemaker_model" "model" {
   execution_role_arn = aws_iam_role.sagemaker_role.arn
 
   primary_container {
-    image          = "763104351884.dkr.ecr.us-east-2.amazonaws.com/pytorch-inference:1.13.1-cpu-py39-ubuntu20.04"
-    model_data_url = "s3://${aws_s3_bucket.artifact_bucket.bucket}/${aws_s3_object.model_artifact.key}"
+  image          = "763104351884.dkr.ecr.us-east-2.amazonaws.com/pytorch-inference:2.1.0-cpu-py310-ubuntu20.04"
+  model_data_url = "s3://${aws_s3_bucket.artifact_bucket.bucket}/${aws_s3_object.model_artifact.key}"
   }
+
 
   depends_on = [aws_s3_object.model_artifact]
 }
