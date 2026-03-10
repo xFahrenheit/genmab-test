@@ -1,51 +1,52 @@
-# Task 1: Customer Segmentation with AWS Sagemaker
+# Task 3: Generative AI Integration
 
-### 1. Dataset Selection
-I used the provided `customer_segmentation_data.csv` for this stage.
+# Setup
 
-Available features:
-* **Age**, **Gender**: Customer demographic information.
-* **Income**: Annual earnings.
-* **Purchases**: Historical purchase frequency.
+## Step 1: Setting up AWS permissions in IAM console
 
-Choices:
-- I converted the `Income` and `Purchases` and created a `Spending_Power` variable (Spending Power = Income / Purchases). This ratio provided a strong signal for the clustering.
-- I dropped the Gender column as I believe it does not provide any insight in segmentation.
+1. In the **AWS Management Console**, create a new **Role** for the use case *Lambda*
+2. Add policies
+    - AWSLambdaBasicExecutionRole: Allows for logging controls
+    - Custom policy to enable the use of `bedrock:InvokeModel` in the Lambda function
 
-### 2. Model Selection: K-Means Clustering
-I chose *K-Means Clustering* as the primary algorithm.
-* **Reasoning**: It is highly efficient for discovering patterns in unlabeled data and provides clear, interpretable "centroids" for business personas.
-* **Alternatives Considered & Rejected**:
-    * *DBSCAN*: Rejected because it identifies "outliers" as noise, whereas this project required every customer to be assigned to a segment.
+## Step 2: Set up (Python) Lambda function
 
-### 3. Environment & Feature Engineering
-The project was developed using an **AWS SageMaker Notebook Instance**. 
+1. Configure the Lambda function to assume the newly created role
+2. Modify the function logic to read user input and invoke an AWS Bedrock model on it
+    - Currently, I've set it up to use `us.anthropic.claude-3-haiku-20240307-v1:0`
+    - Expects a `text` field and an optional user `query`
+3. Configure a higher wait time for the Lambda function
+    - Default wait time is too short for testing LLM inference
 
-#### **Feature Engineering**
-* I engineered a "power user" feature: `Spending_Power = Income / Purchases`.
-* I used `StandardScaler` to ensure that high `Income` values did not bias the distance-based calculations.
+# Implemented Functionality
 
-### 4. Deployment & Optimization
-The model was deployed to a persistent **SageMaker Endpoint** (`ml.m5.xlarge`).
-* **Optimization**: The deployment was optimized for low-latency by using a Scikit-Learn Inference Container.
-* **Inference Logic**: A custom `script.py` was developed with a dedicated `input_fn` to handle **JSON payloads**, allowing for high-speed batch predictions.
+The API endpoint ingests a request containing:
+- `auth_key`: for simple authentication
+- `text`: unstructured text document
+- `query`: (Optional) query
 
-#### **Model Versioning & Management**
-* **Versioning**: Managed via SageMaker's S3 integration. Every training run generates a unique timestamped `.tar.gz` model artifact.
-* **Management**: The use of a Scikit-Learn `Pipeline` ensures that the preprocessing logic (scaling) is versioned and bundled exactly with the model weights.
+The endpoint returns a dictionary containing:
+- `statusCode`: Anything besides 200 is an error
+- `message_response`: A JSON string containing the structured response
 
----
+# Sample Tests
 
-## Usage & Inference
-* The endpoint is configured to accept JSON lists representing `[Age, Spending_Power]`.
+## Test 1
 
-**Example JSON Payload:**
 ```json
-[
-  [25, 1250.0], 
-  [45, 3000.5]
-]
+{
+  "text": "Barack Hussein Obama II[a] (born August 4, 1961) is an American politician who served as the 44th president of the United States from 2009 to 2017. A member of the Democratic Party, he was the first African American president. Obama previously served as a U.S. senator representing Illinois from 2005 to 2008 and as an Illinois state senator from 1997 to 2004.\nBorn in Honolulu, Hawaii, Obama graduated from Columbia University in 1983 with a Bachelor of Arts degree in political science and later worked as a community organizer in Chicago. In 1988, Obama enrolled in Harvard Law School, where he was the first black president of the Harvard Law Review. He became a civil rights attorney and an academic, teaching constitutional law at the University of Chicago Law School from 1992 to 2004. In 1996, Obama was elected to represent the 13th district in the Illinois Senate, a position he held until 2004, when he successfully ran for the U.S. Senate. In the 2008 presidential election, after a close primary campaign against Hillary Clinton, he was nominated by the Democratic Party for president. Obama selected Joe Biden as his running mate and defeated Republican nominee John McCain and his running mate Sarah Palin.",
+  "query": "",
+  "auth_key": "<ADD-AUTH-KEY-HERE>"
+}
 ```
 
-## Stopping Endpoint
-* To prevent billing as I am using the free tier, the endpoint is stopped by using `predictor.delete_endpoint()`
+## Test 2
+
+```json
+{
+  "text": "Barack Hussein Obama II[a] (born August 4, 1961) is an American politician who served as the 44th president of the United States from 2009 to 2017. A member of the Democratic Party, he was the first African American president. Obama previously served as a U.S. senator representing Illinois from 2005 to 2008 and as an Illinois state senator from 1997 to 2004.\nBorn in Honolulu, Hawaii, Obama graduated from Columbia University in 1983 with a Bachelor of Arts degree in political science and later worked as a community organizer in Chicago. In 1988, Obama enrolled in Harvard Law School, where he was the first black president of the Harvard Law Review. He became a civil rights attorney and an academic, teaching constitutional law at the University of Chicago Law School from 1992 to 2004. In 1996, Obama was elected to represent the 13th district in the Illinois Senate, a position he held until 2004, when he successfully ran for the U.S. Senate. In the 2008 presidential election, after a close primary campaign against Hillary Clinton, he was nominated by the Democratic Party for president. Obama selected Joe Biden as his running mate and defeated Republican nominee John McCain and his running mate Sarah Palin.",
+  "query": "Extract education details.",
+  "auth_key": "<ADD-AUTH-KEY-HERE>"
+}
+```
